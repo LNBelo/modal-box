@@ -26,22 +26,28 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 	<p>Cor para o layout no formato #FFFFFF (opcional):</p>
 	<cdx-text-input v-model="inputValue" aria-label="TextInput default demo"></cdx-text-input>
 
-	<p>Insira o nome dos pesquisadores separados por ponto e vígula:</p>
-	<cdx-typeahead-search id="typeahead-search-wikidata" form-action="https://www.wikidata.org/w/index.php"
-		search-results-label="Search results" :search-results="searchResults" :search-footer-url="searchFooterUrl"
-		:highlight-query="true" :visible-item-limit="5" placeholder="Search Wikidata" @input="onInput"
-		@search-result-click="onSearchResultClick" @submit="onSubmit" @load-more="onLoadMore">
-		<template #default>
-			<input type="hidden" name="language" value="en">
-			<input type="hidden" name="title" value="Special:Search">
+	<cdx-field>
+		<cdx-lookup
+			v-model:selected="selection"
+			:menu-items="menuItems"
+			:menu-config="menuConfig"
+			@input="onInput"
+			@load-more="onLoadMore"
+		>
+			<template #no-results>
+				No results found.
+			</template>
+		</cdx-lookup>
+		<template #label>
+			Item lookup
 		</template>
-		<template #search-footer-text="{ searchQuery }">
-			Search Wikidata for pages containing
-			<strong class="cdx-typeahead-search__search-footer__query">
-				{{ searchQuery }}
-			</strong>
+		<template #description>
+			Search Wikidata items
 		</template>
-	</cdx-typeahead-search>
+		<template #help-text>
+			Start typing the name of a Wikidata item to see suggestions
+		</template>
+	</cdx-field>
 
 	<p>Digite um resumo da edição:</p>
 	<cdx-text-input v-model="inputValue" aria-label="TextInput default demo"></cdx-text-input>
@@ -55,130 +61,129 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			}
 		},
 		setup() {
-			function ref(value){
-				return Vue.ref(value);
-			}
-	        const searchResults = ref([]);
-	        const searchFooterUrl = ref('');
-	        const currentSearchTerm = ref('');
-	
-	        function fetchResults(searchTerm, offset) {
-	            const params = new URLSearchParams({
-	                origin: '*',
-	                action: 'wbsearchentities',
-	                format: 'json',
-	                limit: '10',
-	                props: 'url',
-	                language: 'en',
-	                uselang: 'en',
-	                type: 'item',
-	                search: searchTerm
-	            });
-	            if (offset) {
-	                params.set('continue', `${offset}`);
-	            }
-	            return fetch(`https://www.wikidata.org/w/api.php?${params.toString()}`)
-	                .then((response) => response.json());
-	        }
-	
-	        /**
-	         * Format search results for consumption by TypeaheadSearch.
-	         *
-	         * @param pages
-	         * @return
-	         */
-	        function adaptApiResponse(pages) {
-	            return pages.map(({ id, label, url, match, description, display = {} }) => ({
-	                value: id,
-	                label,
-	                match: match.type === 'alias' ? `(${match.text})` : '',
-	                description,
-	                url,
-	                language: {
-	                    label: display && display.label && display.label.language,
-	                    match: match.type === 'alias' ? match.language : undefined,
-	                    description: display && display.description && display.description.language
-	                }
-	            }));
-	        }
-	
-	        function onInput(value) {
-	            // eslint-disable-next-line no-console
-	            console.log('input event emitted with value:', value);
-	
-	            // Internally track the current search term.
-	            currentSearchTerm.value = value;
-	
-	            // Unset search results and the search footer URL if there is no value.
-	            if (!value || value === '') {
-	                searchResults.value = [];
-	                searchFooterUrl.value = '';
-	                return;
-	            }
-	
-	            fetchResults(value).then((data) => {
-	                // Make sure this data is still relevant first.
-	                if (currentSearchTerm.value === value) {
-	                    // If there are results, format them into an array of
-	                    // SearchResults to be passed into TypeaheadSearch for
-	                    // display as a menu of search results.
-	                    searchResults.value = data.search && data.search.length > 0 ?
-	                        adaptApiResponse(data.search) :
-	                        [];
-	
-	                    // Set the search footer URL to a link to the search
-	                    // page for the current search query.
-	                    searchFooterUrl.value = `https://www.wikidata.org/w/index.php?search=${encodeURIComponent(value)}&title=Special%3ASearch&fulltext=1`;
-	                }
-	            }).catch(() => {
-	                // On error, reset search results and search footer URL.
-	                searchResults.value = [];
-	                searchFooterUrl.value = '';
-	            });
-	        }
+		const selection = ref( null );
+		const menuItems = ref( [] );
+		const currentSearchTerm = ref( '' );
 
-	        function deduplicateResults(results) {
-	            const seen = new Set(searchResults.value.map((result) => result.value));
-	            return results.filter((result) => !seen.has(result.value));
-	        }
-	
-	        function onLoadMore() {
-	            // eslint-disable-next-line no-console
-	            console.log('load-more event emitted');
-	
-	            if (!currentSearchTerm.value) {
-	                return;
-	            }
-	
-	            fetchResults(currentSearchTerm.value, searchResults.value.length).then((data) => {
-	                const results = data.search && data.search.length > 0 ?
-	                    adaptApiResponse(data.search) :
-	                    [];
-	
-	                const deduplicatedResults = deduplicateResults(results);
-	                searchResults.value.push(...deduplicatedResults);
-	            });
-	        }
-	
-	        function onSearchResultClick(value) {
-	            // eslint-disable-next-line no-console
-	            console.log('search-result-click event emitted with value:', value);
-	        }
-	
-	        function onSubmit(value) {
-	            // eslint-disable-next-line no-console
-	            console.log('submit event emitted with value:', value);
-	        }
-	
-	        return {
-	            searchResults,
-	            searchFooterUrl,
-	            onInput,
-	            onLoadMore,
-	            onSearchResultClick,
-	            onSubmit
-	        };
-		},
+		function ref(value){
+				return Vue.ref(value);
+		}
+
+		/**
+		 * Get search results.
+		 *
+		 * @param {string} searchTerm
+		 * @param {number} offset Optional result offset
+		 *
+		 * @return {Promise}
+		 */
+		function fetchResults( searchTerm, offset ) {
+			const params = new URLSearchParams( {
+				origin: '*',
+				action: 'wbsearchentities',
+				format: 'json',
+				limit: '10',
+				props: 'url',
+				language: 'en',
+				search: searchTerm
+			} );
+			if ( offset ) {
+				params.set( 'continue', String( offset ) );
+			}
+			return fetch( `https://www.wikidata.org/w/api.php?${ params.toString() }` )
+				.then( ( response ) => response.json() );
+		}
+
+		/**
+		 * Handle lookup input.
+		 *
+		 * TODO: this should be debounced.
+		 *
+		 * @param {string} value
+		 */
+		function onInput( value ) {
+			// Internally track the current search term.
+			currentSearchTerm.value = value;
+
+			// Do nothing if we have no input.
+			if ( !value ) {
+				menuItems.value = [];
+				return;
+			}
+
+			fetchResults( value )
+				.then( ( data ) => {
+					// Make sure this data is still relevant first.
+					if ( currentSearchTerm.value !== value ) {
+						return;
+					}
+
+					// Reset the menu items if there are no results.
+					if ( !data.search || data.search.length === 0 ) {
+						menuItems.value = [];
+						return;
+					}
+
+					// Build an array of menu items.
+					const results = data.search.map( ( result ) => {
+						return {
+							label: result.label,
+							value: result.id,
+							description: result.description
+						};
+					} );
+
+					// Update menuItems.
+					menuItems.value = results;
+				} )
+				.catch( () => {
+					// On error, set results to empty.
+					menuItems.value = [];
+				} );
+		}
+
+		function deduplicateResults( results ) {
+			const seen = new Set( menuItems.value.map( ( result ) => result.value ) );
+			return results.filter( ( result ) => !seen.has( result.value ) );
+		}
+
+		function onLoadMore() {
+			if ( !currentSearchTerm.value ) {
+				return;
+			}
+
+			fetchResults( currentSearchTerm.value, menuItems.value.length )
+				.then( ( data ) => {
+					if ( !data.search || data.search.length === 0 ) {
+						return;
+					}
+
+					const results = data.search.map( ( result ) => {
+						return {
+							label: result.label,
+							value: result.id,
+							description: result.description
+						};
+					} );
+
+					// Update menuItems.
+					const deduplicatedResults = deduplicateResults( results );
+					menuItems.value.push( ...deduplicatedResults );
+				} );
+		}
+
+		const menuConfig = {
+			visibleItemLimit: 6
+		};
+
+		return {
+			selection,
+			menuItems,
+			menuConfig,
+			onInput,
+			onLoadMore
+		};
+	},
 		mounted() {
 			dialogTrigger.addEventListener( 'click', this.openDialog );
 		},
@@ -190,6 +195,7 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 	.component( 'cdx-text-input', Codex.CdxTextInput )
 	.component( 'cdx-text-area', Codex.CdxTextArea )
 	.component( 'cdx-button', Codex.CdxButton )
-	.component( 'cdx-typeahead-search', Codex.CdxTypeaheadSearch )
+	.component( 'cdx-lookup', Codex.CdxLookup )
+	.component( 'cdx-field', Codex.CdxField )
 	.mount( mountPoint );
 } );
