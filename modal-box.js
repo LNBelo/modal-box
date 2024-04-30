@@ -27,6 +27,16 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 	<cdx-text-input v-model="inputValue" aria-label="TextInput default demo"></cdx-text-input>
 
 	<cdx-field>
+		<template #label>
+			Pesquisadores
+		</template>
+		<template #description>
+			Encontre o pesquisador no Wikidata
+		</template>
+		<template #help-text>
+			Se o pesquisador não tiver um item no Wikidata insira o nome dele no campo acima
+		</template>
+		
 		<cdx-lookup
 			v-model:selected="selection"
 			:menu-items="menuItems"
@@ -35,18 +45,16 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			@load-more="onLoadMore"
 		>
 			<template #no-results>
-				No results found.
+				Nenhum resultado encontrado.
 			</template>
 		</cdx-lookup>
-		<template #label>
-			Item lookup
-		</template>
-		<template #description>
-			Search Wikidata items
-		</template>
-		<template #help-text>
-			Start typing the name of a Wikidata item to see suggestions
-		</template>
+		
+		<cdx-chip-input
+		v-model:input-chips="exampleChips"
+		remove-button-label="Remove"
+		separateInput="true"
+		></cdx-chip-input>
+		
 	</cdx-field>
 
 	<p>Digite um resumo da edição:</p>
@@ -175,13 +183,17 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 		const menuConfig = {
 			visibleItemLimit: 6
 		};
+		
+		// ChipInput
+		const exampleChips = ref( [] );
 
 		return {
 			selection,
 			menuItems,
 			menuConfig,
 			onInput,
-			onLoadMore
+			onLoadMore,
+			exampleChips // ChipInput
 		};
 	},
 		mounted() {
@@ -197,5 +209,6 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 	.component( 'cdx-button', Codex.CdxButton )
 	.component( 'cdx-lookup', Codex.CdxLookup )
 	.component( 'cdx-field', Codex.CdxField )
+	.component( 'cdx-chip-input', Codex.CdxChipInput )
 	.mount( mountPoint );
 } );
