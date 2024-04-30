@@ -43,6 +43,7 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			:menu-config="menuConfig"
 			@input="onInput"
 			@load-more="onLoadMore"
+			@update:selected="updateSelected"
 		>
 			<template #no-results>
 				Nenhum resultado encontrado.
@@ -69,6 +70,34 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			}
 		},
 		setup() {
+		function updateSelected(){
+			// selected value has a QID
+			if(selection.value !== null){
+				
+				// iterates over suggested items to find the selected item
+				for (let item of menuItems.value) {
+					if(item.value == selection.value){
+						
+						// manipulates chipInput values
+						// var payload = '<a href="https://www.wikidata.org/wiki/' + item.value + '" target="_blank">' + item.label + ' (' + item.value + ')</a>';
+						var payload = item.label + " (" + item.value + ")";
+						var payloadInChips = false;
+						var chips = exampleChips.value;
+						for (let chip of chips){
+							if(payload == chip.value){
+								payloadInChips = true;
+								break;
+							}
+						}
+						if (payloadInChips == false) {
+							chips.push({value: payload});
+							return;
+						}
+					}
+				}
+			}
+		}
+		
 		const selection = ref( null );
 		const menuItems = ref( [] );
 		const currentSearchTerm = ref( '' );
@@ -193,7 +222,8 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			menuConfig,
 			onInput,
 			onLoadMore,
-			exampleChips // ChipInput
+			exampleChips, // ChipInput
+			updateSelected
 		};
 	},
 		mounted() {
