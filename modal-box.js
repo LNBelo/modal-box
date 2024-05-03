@@ -1,12 +1,9 @@
-// Add a "Codex Widgets" portlet to the main menu
-mw.util.addPortlet('p-codex', 'modal-box', '#p-modal');
-
-const dialogTrigger = document.getElementById('p-modal');
+const elementGpgp = document.getElementById('gpgp-modal');
 
 mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 	const Vue = require( 'vue' );
 	const Codex = require( '@wikimedia/codex' );
-	const mountPoint = document.body.appendChild( document.createElement( 'div' ) );
+	const mountPoint = elementGpgp.appendChild( document.createElement( 'div' ) );
 	
 	Vue.createMwApp( {
 		data: function() {
@@ -16,6 +13,7 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			};
 		},
 		template: `
+<cdx-button action="progressive" weight="primary">Criar Grupo de Pesquisa</cdx-button>
 <cdx-dialog v-model:open="showDialog" title="Criar Grupo de Pesquisa" close-button-label="Close" :default-action="defaultAction" @default="open = false">
 	<p>Digite o título do Grupo de Pesquisa:</p>
 	<cdx-text-input v-model="inputValue" aria-label="TextInput default demo"></cdx-text-input>
@@ -43,7 +41,7 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			:menu-config="menuConfig"
 			@input="onInput"
 			@load-more="onLoadMore"
-			@update:selected="updateSelected"
+			@update:selected="insertSelectedInChipInput"
 		>
 			<template #no-results>
 				Nenhum resultado encontrado.
@@ -70,7 +68,19 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 			}
 		},
 		setup() {
-		function updateSelected(){
+		const selection = ref( null );
+		const menuItems = ref( [] );
+		const currentSearchTerm = ref( '' );
+		const exampleChips = ref( [] );
+		const menuConfig = {
+			visibleItemLimit: 6
+		};
+
+		function ref(value){
+				return Vue.ref(value);
+		}
+		
+		function insertSelectedInChipInput(){
 			// selected value has a QID
 			if(selection.value !== null){
 				
@@ -96,14 +106,6 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 					}
 				}
 			}
-		}
-		
-		const selection = ref( null );
-		const menuItems = ref( [] );
-		const currentSearchTerm = ref( '' );
-
-		function ref(value){
-				return Vue.ref(value);
 		}
 
 		/**
@@ -209,28 +211,21 @@ mw.loader.using( '@wikimedia/codex' ).then( function( require ) {
 				} );
 		}
 
-		const menuConfig = {
-			visibleItemLimit: 6
-		};
-		
-		// ChipInput
-		const exampleChips = ref( [] );
-
 		return {
 			selection,
 			menuItems,
 			menuConfig,
 			onInput,
 			onLoadMore,
-			exampleChips, // ChipInput
-			updateSelected
+			exampleChips,
+			insertSelectedInChipInput
 		};
 	},
 		mounted() {
-			dialogTrigger.addEventListener( 'click', this.openDialog );
+			elementGpgp.addEventListener( 'click', this.openDialog );
 		},
 		unMounted() {
-			dialogTrigger.removeEventListener( this.openDialog );
+			elementGpgp.removeEventListener( this.openDialog );
 		}
 	} )
 	.component( 'cdx-dialog', Codex.CdxDialog )
